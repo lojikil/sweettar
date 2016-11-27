@@ -3,8 +3,13 @@ package sweettar
 use unix
 use core
 
+record tarheader {
+    name: string
+    size: int
+}
+
 @readblock unix.File => Either of (Left of string, Right of array[512] of uint8)
-def readblock fh {
+def readblock fh =
     # do we need to actually match here?
     # maybe just return?
     let res = unix.read fh 512 in
@@ -12,20 +17,17 @@ def readblock fh {
         Left _ => res
         Right _ => res
     end
-}
 
 @readheader unix.File => Either of (Left of string, Right of tarheader)
-def readheader fh {
+def readheader fh =
     let res = readblock fh in
     match res with
         Left _ => res
         Right block => Right $ parseheader block
     end
-}
 
 @parseheader array[512] of uint8 => tarheader
-def parseheader block {
+def parseheader block =
     let name = string-slice block 0 100 in
     let size = int_of_string $ string-slice block 124 137 in
     make tarheader name size
-}
