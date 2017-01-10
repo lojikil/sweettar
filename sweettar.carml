@@ -8,8 +8,8 @@ record tarheader {
     size: int
 }
 
-@readblock unix.File => Either of (Left of string, Right of array[512] of uint8)
-def readblock fh =
+# @readblock unix.File => Either of (Left of string, Right of array[512] of uint8)
+def readblock fh : unix.File => Either of (Left of stirng, Right of array[512] of uint8) =
     # do we need to actually match here?
     # maybe just return?
     let res = unix.read fh 512 in
@@ -18,16 +18,16 @@ def readblock fh =
         Right _ => res
     end
 
-@readheader unix.File => Either of (Left of string, Right of tarheader)
-def readheader fh =
+#@readheader unix.File => Either of (Left of string, Right of tarheader)
+def readheader fh unix.File => Either of (Left of String, Right of tarheader) =
     let res = readblock fh in
     match res with
         Left _ => res
         Right block => Right $ parseheader block
     end
 
-@parseheader array[512] of uint8 => tarheader
-def parseheader block =
+#@parseheader array[512] of uint8 => tarheader
+def parseheader block : array[512] of uint8 => tarheader =
     let name = string-slice block 0 100 in
     let size = int_of_string $ string-slice block 124 137 in
     make tarheader name size
