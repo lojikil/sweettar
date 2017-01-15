@@ -2,14 +2,22 @@ package sweettar
 
 use unix
 use core
+use String
+#use Array
 
 record tarheader {
     name: string
-    size: int
+    mode: int
+    ouid: int
+    ogid: int
+    size: int # packed as in octal
+    mtime: string
+    checksum: int # packed as octal
+    linktype: int # should this be a sum?
+    linkname: string
 }
 
-# @readblock unix.File => Either of (Left of string, Right of array[512] of uint8)
-def readblock fh : unix.File => Either of (Left of stirng, Right of array[512] of uint8) =
+def readblock fh : unix.File => Either of (Left of string, Right of array[512] of uint8) =
     # do we need to actually match here?
     # maybe just return?
     let res = unix.read fh 512 in
@@ -18,16 +26,21 @@ def readblock fh : unix.File => Either of (Left of stirng, Right of array[512] o
         Right _ => res
     end
 
-#@readheader unix.File => Either of (Left of string, Right of tarheader)
-def readheader fh unix.File => Either of (Left of String, Right of tarheader) =
+def readheader fh unix.File => Either of (Left of string, Right of tarheader) =
     let res = readblock fh in
     match res with
         Left _ => res
         Right block => Right $ parseheader block
     end
 
-#@parseheader array[512] of uint8 => tarheader
 def parseheader block : array[512] of uint8 => tarheader =
-    let name = string-slice block 0 100 in
-    let size = int_of_string $ string-slice block 124 137 in
-    make tarheader name size
+    let name = String.slice block 0 100 in
+    let mode = tar-int $ String.slice block 100 108 in
+    let ouid = tar-int $ String.slice block 108 116 in
+    let ogid = tar-int $ String.slice block 116 124 in
+    let size = tar-octal-int $ String.slice block 124 136 in
+    let mtime = tar-octal-int $ String.slice block 136 148 in
+    let checksum = tar-int $ String.slice block 148 156 in
+    let linktype = tar-int $ String.slick block 156 157 in
+    let linkname = String.slice block 157 258 in
+    make-tarheader name mode ouid ogid size mtime checksum linktype linkname
