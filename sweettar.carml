@@ -1,23 +1,20 @@
-package sweettar
-
-use unix
-use core
-use String
-#use Array
+# @(#) a yummy and sweet tar library, meant to help
+# @(#) dogfood the current state of carML
+# @(#) copyright 2016-2018 Stefan Edwards, ISC licensed  
 
 record tarheader {
-    name: string
-    mode: int
-    ouid: int
-    ogid: int
-    size: int # packed as in octal
-    mtime: string
-    checksum: int # packed as octal
-    linktype: int # should this be a sum?
-    linkname: string
+    name:string
+    mode:int
+    ouid:int
+    ogid:int
+    size:int # packed as in octal
+    mtime:string
+    checksum:int # packed as octal
+    linktype:int # should this be a sum?
+    linkname:string
 }
 
-def readblock fh : unix.File => Either of (Left of string, Right of array[512] of uint8) =
+def readblock fh : unix.File => Either[string, array[int]]  =
     # do we need to actually match here?
     # maybe just return?
     let res = unix.read fh 512 in
@@ -26,21 +23,22 @@ def readblock fh : unix.File => Either of (Left of string, Right of array[512] o
         Right _ => res
     end
 
-def readheader fh unix.File => Either of (Left of string, Right of tarheader) =
+def readheader fh unix.File => Either[string, tarheader] =
     let res = readblock fh in
     match res with
-        Left _ => res
-        Right block => Right $ parseheader block
+        (Left _) => res
+        (Right block) => Right $ parseheader block
     end
 
-def parseheader block : array[512] of uint8 => tarheader =
-    let name = String.slice block 0 100 in
-    let mode = tar-int $ String.slice block 100 108 in
-    let ouid = tar-int $ String.slice block 108 116 in
-    let ogid = tar-int $ String.slice block 116 124 in
-    let size = tar-octal-int $ String.slice block 124 136 in
-    let mtime = tar-octal-int $ String.slice block 136 148 in
-    let checksum = tar-int $ String.slice block 148 156 in
-    let linktype = tar-int $ String.slick block 156 157 in
-    let linkname = String.slice block 157 258 in
+def parseheader block : array[512] of uint8 => tarheader = {
+    val name:string = String.slice block 0 100
+    val mode:int = tar-int $ String.slice block 100 108
+    val ouid:int = tar-int $ String.slice block 108 116
+    val ogid:int = tar-int $ String.slice block 116 124
+    val size:int = tar-octal-int $ String.slice block 124 136
+    val mtime:int = tar-octal-int $ String.slice block 136 148
+    val checksum:int = tar-int $ String.slice block 148 156
+    val linktype:int = tar-int $ String.slick block 156 157
+    val linkname:string = String.slice block 157 258
     make-tarheader name mode ouid ogid size mtime checksum linktype linkname
+}
