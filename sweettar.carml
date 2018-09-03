@@ -14,21 +14,52 @@ record tarheader {
     linkname:string
 }
 
-def readblock fh : unix.File => Either[string, array[int]]  =
-    # do we need to actually match here?
-    # maybe just return?
-    let res = unix.read fh 512 in
-    match res with
-        Left _ => res
-        Right _ => res
-    end
+# I don't have specialization
+# and the like working for parameterized
+# types, so we'll use a monomorphic Either
+# directly here
+type BlockEither {
+    Left string
+    Right array[U8]
+}
 
-def readheader fh unix.File => Either[string, tarheader] =
-    let res = readblock fh in
-    match res with
-        (Left _) => res
-        (Right block) => Right $ parseheader block
+type TarEither {
+    Left string
+    Right TarHeader
+}
+
+# I dislike this right now; with the current
+# compiler you *must* know you're returning
+# a ref or not; I think that should be allowed
+# of course, but I also think there will be a
+# number of folks who *DO NOT* Need to know that
+# implementation detail.
+def readblock fh:FILE => BlockEither = {
+    var res:array[U8] = (heap-allocate array[U8] 512)
+    val status:int = (fread res (sizeof U8) 512 fh)
+
+    match status with
+        512 => (BlockEither.Right res)
+        0 => (BlockEither.Left "end of file")
+        else => (BlockEither.Left "malformed file")
     end
+}
+
+def readheader fh:FILE => TarEither = {
+    val res:BlockEither = (readblock fh)
+    match res with
+        (BlockEither.Left _) => res
+        (BlockEither.Right block) => (TarEither.Right $ parseheader block)
+    end
+}
+
+def tar-int src:string => int = {
+    0
+}
+
+def tar-octal-int src:string => int = {
+    0
+}
 
 def parseheader block : array[512] of uint8 => tarheader = {
     val name:string = String.slice block 0 100
